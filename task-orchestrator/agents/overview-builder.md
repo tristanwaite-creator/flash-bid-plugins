@@ -64,10 +64,7 @@ project/
 
 ### 1.1 Read Project State
 
-```bash
-# Read the orchestrator state
-cat project-tasks.json
-```
+Use the **Read tool** to read `project-tasks.json`:
 
 Extract:
 - Total tasks and their statuses
@@ -77,10 +74,7 @@ Extract:
 
 ### 1.2 Parse Activity Log
 
-```bash
-# Read activity log
-cat project-activity.md
-```
+Use the **Read tool** to read `project-activity.md`:
 
 Extract:
 - Timeline of all actions
@@ -90,21 +84,28 @@ Extract:
 
 ### 1.3 Analyze Codebase
 
-```bash
-# Find all source files
-find . -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" | head -100
+Use the **Glob tool** to find source files:
+```
+Glob patterns:
+- "**/*.ts"
+- "**/*.tsx"
+- "**/*.js"
+- "**/*.jsx"
+```
 
-# Get directory structure
-tree -L 3 -I node_modules 2>/dev/null || find . -type d -maxdepth 3 | grep -v node_modules
+Use **LS via Bash** for directory structure (this is allowed):
+```bash
+ls -la src/
 ```
 
 For key directories, analyze:
 - Purpose (inferred from naming/content)
 - Files and their roles
-- Import/export relationships
+- Import/export relationships (use Grep tool)
 
 ### 1.4 Git History
 
+Use **Bash** for git commands (git operations are allowed):
 ```bash
 # Recent commits
 git log --oneline -20

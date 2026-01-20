@@ -22,9 +22,16 @@ if [ -f "$TASKS_FILE" ]; then
     echo -e "${YELLOW}project-tasks.json already exists, skipping...${NC}"
 else
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    # Detect project name from package.json or directory name
+    if [ -f "$PROJECT_DIR/package.json" ]; then
+        PROJECT_NAME=$(grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' "$PROJECT_DIR/package.json" | head -1 | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    fi
+    PROJECT_NAME="${PROJECT_NAME:-$(basename "$(cd "$PROJECT_DIR" && pwd)")}"
+
     cat > "$TASKS_FILE" << EOF
 {
-  "project_name": "My Project",
+  "project": "$PROJECT_NAME",
+  "description": "",
   "created_at": "$TIMESTAMP",
   "orchestrator_state": {
     "status": "idle",
@@ -57,15 +64,6 @@ else
 ---
 EOF
     echo -e "${GREEN}Created project-activity.md${NC}"
-fi
-
-# Create screenshots directory
-SCREENSHOTS_DIR="$PROJECT_DIR/screenshots"
-if [ -d "$SCREENSHOTS_DIR" ]; then
-    echo -e "${YELLOW}screenshots/ directory already exists, skipping...${NC}"
-else
-    mkdir -p "$SCREENSHOTS_DIR"
-    echo -e "${GREEN}Created screenshots/ directory${NC}"
 fi
 
 echo ""

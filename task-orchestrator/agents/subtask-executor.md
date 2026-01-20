@@ -247,15 +247,15 @@ Before reporting completion:
 
 ## Auto-Documentation Integration
 
-After completing a subtask that involves significant changes (3+ files modified or a major feature), consider suggesting:
+After completing a subtask, if you notice the **parent task** is now fully complete (all its subtasks are done), suggest updating documentation:
 
 ```
 <documentation_hint>
-Multiple files modified. Consider running:
+Task [TASK-ID] fully complete. Consider running:
 /orchestrate overview update
 </documentation_hint>
 ```
 
 This keeps project documentation in sync with implementation progress.
 
-**Note:** The orchestrator loop may also periodically trigger overview updates automatically (every 10 iterations or after task completion).
+**Note:** The orchestrator may also trigger periodic overview updates (every 10 iterations or after task completion).

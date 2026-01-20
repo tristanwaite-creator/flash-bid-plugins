@@ -63,16 +63,164 @@ Every subtask MUST pass ALL five rules:
    - Glob for related files
    - Read files that will be modified
    - Understand existing patterns
-3. **Plan subtasks** by:
+3. **Analyze file relationships** (see File Relationship Analysis below)
+4. **Plan subtasks** by:
    - Identifying discrete code changes
    - Ordering by dependencies
-   - Estimating time (5-15 min each)
-4. **Capture code context** for each:
+   - Estimating time using complexity analysis (5-15 min each)
+5. **Infer dependencies** automatically (see Dependency Inference below)
+6. **Capture code context** for each:
    - Compute file hash (sha256, first 12 chars)
    - Extract existing code at insertion point
    - Specify exact insert location
-5. **Validate each subtask** against all 5 rules
-6. **Regenerate failures** (max 3 attempts per subtask)
+7. **Validate each subtask** against all 5 rules
+8. **Regenerate failures** (max 3 attempts per subtask)
+
+---
+
+## File Relationship Analysis
+
+Before creating subtasks, analyze which files typically work together:
+
+### 1. Import Analysis
+Find files that import from the target file:
+```bash
+grep -rl "import.*from.*targetFile" --include="*.ts" --include="*.tsx" src/
+```
+
+Find what the target file imports:
+```bash
+grep "^import" targetFile.ts
+```
+
+### 2. Git Co-change Analysis
+Find files commonly modified together:
+```bash
+git log --pretty=format: --name-only --since="6 months ago" -- targetFile.ts | sort | uniq -c | sort -rn | head -10
+```
+
+### 3. Relationship Categories
+
+| Relationship | How to Detect | Implication |
+|--------------|---------------|-------------|
+| **Imports from target** | `grep -l "import.*from.*target"` | May need updates if types/exports change |
+| **Target imports** | `grep "^import" target` | Dependencies that must exist |
+| **Test file** | `target.test.ts` or `__tests__/target.ts` | Include test updates in subtasks |
+| **Type definitions** | `types.ts`, `*.d.ts` | Often need coordinated changes |
+| **Co-changed files** | Git history | High coupling, consider together |
+
+### 4. Output
+Include in task context:
+```
+Related Files for [target.ts]:
+├── Dependents (import from this): api/routes.ts, components/Form.tsx
+├── Dependencies (this imports): types.ts, utils.ts
+├── Test file: target.test.ts
+└── Co-changed: config.ts (5 times), schema.ts (3 times)
+```
+
+---
+
+## Dependency Inference
+
+Automatically detect dependencies between subtasks based on what they create and consume.
+
+### Analysis Steps
+
+1. **Identify what each subtask CREATES**:
+   - New types/interfaces/enums
+   - New functions/methods
+   - New exports
+   - New files
+
+2. **Identify what each subtask USES**:
+   - Types it references
+   - Functions it calls
+   - Imports it adds
+
+3. **Build dependency graph**:
+   ```
+   IF subtask A creates "UserType"
+   AND subtask B uses "UserType"
+   THEN B depends on A
+   ```
+
+### Inference Rules
+
+| Creates | Uses | Dependency |
+|---------|------|------------|
+| Type `Foo` | Imports `Foo` | Creator → User |
+| Function `bar()` | Calls `bar()` | Creator → Caller |
+| Export `{ X }` | `import { X } from` | Exporter → Importer |
+| New file | Imports from file | File creator → Importer |
+
+### Validation Output
+Show inferred dependencies:
+```
+Dependency Inference:
+├── TASK-001-01 (creates UserType)
+│   └── Required by: TASK-001-02, TASK-001-03
+├── TASK-001-02 (creates validateUser)
+│   └── Required by: TASK-001-04
+└── TASK-001-03 (creates UserContext)
+    └── No dependents
+```
+
+### Auto-populate
+After generating subtasks, automatically fill `dependencies` array based on analysis.
+
+---
+
+## Complexity Analysis
+
+Use context-aware complexity scoring for better time estimates.
+
+### Base Complexity Scores
+
+| Operation Type | Base Minutes | Description |
+|----------------|--------------|-------------|
+| Simple type addition | 5-7 | Add enum, simple interface |
+| Complex type | 8-10 | Interface with methods, generics |
+| Utility function | 7-10 | Pure function, no side effects |
+| Function with logic | 10-12 | Conditionals, loops, error handling |
+| API route (simple) | 8-10 | Basic GET endpoint |
+| API route (validation) | 12-15 | POST with validation, error handling |
+| Component (presentational) | 8-10 | Stateless, props-driven |
+| Component (stateful) | 12-15 | Hooks, effects, complex state |
+
+### Complexity Multipliers
+
+| Factor | Multiplier | Example |
+|--------|------------|---------|
+| Has existing tests | 1.2x | Must update test expectations |
+| No existing tests | 1.5x | Must write new tests |
+| Touches shared code | 1.3x | Higher risk, more verification |
+| New pattern introduction | 1.4x | Extra documentation needed |
+| Integration required | 1.3x | Connects multiple systems |
+
+### Change Density Rule
+If a single file section requires >3 distinct changes, split into multiple subtasks:
+```
+BAD: "Update user.ts lines 50-100" (adds type, function, and validation)
+GOOD:
+  - "Add UserType enum (lines 50-60)"
+  - "Add validateUser function (lines 61-80)"
+  - "Add input sanitization (lines 81-95)"
+```
+
+### Time Calculation
+```
+final_time = base_time * multiplier1 * multiplier2 * ...
+
+Example:
+- API route with validation: 12 min base
+- Has existing tests: 1.2x
+- Final: 12 * 1.2 = 14.4 → 14 minutes
+```
+
+### Validation
+- If calculated time < 5 min: Add more context or combine with related change
+- If calculated time > 15 min: Split into smaller operations
 
 ## Subtask Schema (Multi-Worker Ready)
 

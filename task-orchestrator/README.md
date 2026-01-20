@@ -46,8 +46,13 @@ Workers coordinate via `project-tasks.json`:
 | `/orchestrate pause` | Pause this worker |
 | `/orchestrate pause all` | Signal all workers to stop |
 | `/orchestrate add task: [desc]` | Add and breakdown a new task |
+| `/orchestrate next` | Execute single next subtask |
+| `/orchestrate init` | Initialize project-tasks.json |
+| `/orchestrate reset [id]` | Reset a blocked subtask to pending |
+| `/orchestrate complete [id]` | Manually mark subtask as completed |
+| `/orchestrate overview` | Generate project documentation |
 | `/breakdown [task-id]` | Manually breakdown a task |
-| `/next-task` | View next ready subtask |
+| `/next-task` | View next ready subtask (read-only) |
 
 ## Quick Start
 
@@ -81,9 +86,15 @@ cd your-project
 |------|---------|
 | `project-tasks.json` | Task state, worker registry, subtasks |
 | `project-activity.md` | Audit log with worker attribution |
-| `screenshots/` | Browser test screenshots |
+| `PROJECT-OVERVIEW.md` | Generated high-level documentation |
+| `ARCHITECTURE.md` | Generated architecture diagrams |
+| `FILE-MAP.md` | Generated file structure map |
+| `CHANGELOG.md` | Generated change history |
+| `DEPENDENCIES.md` | Generated dependency tracking |
 
 ## Subtask Schema
+
+> **Canonical reference**: See `schema/subtask-schema.md` for complete field definitions.
 
 ```json
 {
@@ -91,7 +102,14 @@ cd your-project
   "title": "Add input validation",
   "status": "pending",
   "claimed_by": null,
+  "claimed_at": null,
   "completed_by": null,
+  "completed_at": null,
+  "claim_intent": {
+    "worker": null,
+    "intent_at": null,
+    "expires_at": null
+  },
   "dependencies": ["TASK-001-01"],
   "file_path": "src/validators.ts",
   "verification": ["npm test"],

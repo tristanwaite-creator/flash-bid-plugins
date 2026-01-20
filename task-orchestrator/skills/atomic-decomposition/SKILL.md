@@ -62,6 +62,8 @@ Pattern must match: `line \d+|after |before |end of |start of |replace`
 
 ## Subtask Schema
 
+> **Canonical reference**: See `schema/subtask-schema.md` for complete field definitions.
+
 ```json
 {
   "id": "TASK-001-01",
@@ -75,6 +77,15 @@ Pattern must match: `line \d+|after |before |end of |start of |replace`
   "status": "pending",
   "attempt_count": 0,
   "blocked_reason": null,
+  "claimed_by": null,
+  "claimed_at": null,
+  "completed_by": null,
+  "completed_at": null,
+  "claim_intent": {
+    "worker": null,
+    "intent_at": null,
+    "expires_at": null
+  },
   "code_context": {
     "file_hash": "abc123def456",
     "snapshot_at": "2025-01-19T10:00:00Z",
@@ -84,6 +95,8 @@ Pattern must match: `line \d+|after |before |end of |start of |replace`
   }
 }
 ```
+
+**Multi-Worker Fields**: Always initialize `claimed_by`, `claimed_at`, `completed_by`, `completed_at` as `null`. The `claim_intent` object enables atomic task claiming across multiple workers.
 
 ## Decomposition Strategies
 
@@ -111,6 +124,43 @@ Task →
 ├── [2] "Add function using type" (deps: 1)
 └── [3] "Add API using function" (deps: 2)
 ```
+
+## Complexity-Based Time Estimates
+
+Use these base times and apply multipliers for accurate estimates:
+
+### Base Times by Operation
+| Operation | Base Minutes |
+|-----------|--------------|
+| Simple type/enum | 5-7 |
+| Complex type (generics) | 8-10 |
+| Utility function | 7-10 |
+| Function with logic | 10-12 |
+| API route (GET) | 8-10 |
+| API route (POST + validation) | 12-15 |
+| Stateless component | 8-10 |
+| Stateful component | 12-15 |
+
+### Multipliers
+| Factor | Multiply By |
+|--------|-------------|
+| Has existing tests | 1.2x |
+| No existing tests (must write) | 1.5x |
+| Touches shared/core code | 1.3x |
+| New pattern introduction | 1.4x |
+| Integration required | 1.3x |
+
+### Change Density Rule
+**If >3 distinct changes in one file section → SPLIT**
+
+```
+BAD:  "Update user.ts lines 50-100" (type + function + validation)
+GOOD: Split into 3 subtasks, one per operation
+```
+
+### Validation Thresholds
+- Calculated < 5 min → Add context or combine
+- Calculated > 15 min → Split further
 
 ## Validation Function
 

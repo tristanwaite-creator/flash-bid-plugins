@@ -17,13 +17,24 @@ Break down a specific task into atomic, executable subtasks.
 
 ## Process
 
+**Use the Task tool to spawn the `task-researcher` agent** with the task ID as context. The agent will:
+
 1. **Read the task** from `project-tasks.json`
-2. **Analyze files** that will be modified
-3. **Generate subtasks** using atomic decomposition skill
-4. **Validate** each subtask against poka-yoke rules
-5. **Regenerate** any that fail validation
-6. **Write** subtasks back to `project-tasks.json`
-7. **Log** breakdown to `project-activity.md`
+2. **Analyze files** that will be modified (using Glob/Grep/Read)
+3. **Research** unfamiliar APIs/patterns (using WebSearch/WebFetch)
+4. **Generate subtasks** following atomic decomposition principles
+5. **Validate** each subtask against poka-yoke rules
+6. **Regenerate** any that fail validation (max 3 attempts)
+7. **Write** subtasks back to `project-tasks.json`
+8. **Log** breakdown to `project-activity.md`
+
+### Agent Invocation
+
+```
+Use Task tool with:
+- subagent_type: "task-orchestrator:task-researcher"
+- prompt: "Break down task [TASK-ID] into atomic subtasks. Read the task from project-tasks.json, analyze affected files, and create validated subtasks."
+```
 
 ---
 
@@ -56,8 +67,20 @@ Every subtask MUST pass ALL five rules:
   "status": "pending",
   "attempt_count": 0,
   "blocked_reason": null,
+
+  "claimed_by": null,
+  "claimed_at": null,
+  "completed_by": null,
+  "completed_at": null,
+
+  "claim_intent": {
+    "worker": null,
+    "intent_at": null,
+    "expires_at": null
+  },
+
   "code_context": {
-    "file_hash": "abc123...",
+    "file_hash": "abc123def456",
     "snapshot_at": "2025-01-19T10:00:00Z",
     "existing_code": "export type Role = 'admin' | 'user';",
     "insert_location": "after Role type, around line 25",
@@ -65,6 +88,10 @@ Every subtask MUST pass ALL five rules:
   }
 }
 ```
+
+**IMPORTANT**: When creating subtasks, ALWAYS initialize multi-worker fields:
+- `claimed_by`, `claimed_at`, `completed_by`, `completed_at` → `null`
+- `claim_intent` → `{ "worker": null, "intent_at": null, "expires_at": null }`
 
 ---
 
@@ -101,7 +128,7 @@ For each file in the task, capture:
 
 ```bash
 # Example hash computation
-echo -n "file content" | sha256sum | cut -c1-12
+cat lib/types.ts | sha256sum | cut -c1-12
 ```
 
 ---
