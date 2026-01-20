@@ -56,6 +56,25 @@ Working on auth...            Working on API...             Working on UI...
 
 ---
 
+## Backward Compatibility
+
+The orchestrator handles both old and new schema formats:
+
+| Field | Old Format | New Format | Handling |
+|-------|-----------|------------|----------|
+| Project name | `project_name` | `project` | Accept either |
+| Verification | `"cmd"` (string) | `["cmd"]` (array) | Handle both |
+| claim_intent | missing | `{worker, intent_at, expires_at}` | Optional, skip if missing |
+| Subtask location | `tasks[].subtasks[]` | `tasks[].subtasks[]` | Same structure |
+
+**IMPORTANT**: When reading `project-tasks.json`:
+- Subtasks are nested inside tasks: `tasks[i].subtasks[j]`
+- Check both `project` and `project_name` for project name
+- `verification` may be string or array - handle both
+- `claim_intent` may not exist on older subtasks - treat as unclaimed
+
+---
+
 ## Action: `init`
 
 Create `project-tasks.json` if it doesn't exist:
@@ -199,8 +218,10 @@ WHILE worker.status == "running" AND iteration < 100:
   2. Find candidate subtasks where:
      - status == "pending"
      - claimed_by == null (not claimed by another worker)
-     - claim_intent.worker == null OR claim_intent.expires_at < now (no active intent)
+     - claim_intent is missing OR claim_intent.worker == null OR claim_intent.expires_at < now
      - all dependencies completed
+
+     NOTE: Subtasks in tasks[].subtasks[] array - iterate through all tasks to find subtasks
 
   3. IF no candidate subtasks:
      - Check if other workers still working
@@ -209,33 +230,19 @@ WHILE worker.status == "running" AND iteration < 100:
        - BREAK
      - ELSE: Wait and retry (other workers may complete deps)
 
-  4. SELECT subtask using WORKER AFFINITY:
-     - Compute affinity score for each candidate:
-       score = hash(subtask.id) % worker_count
-     - PREFER tasks where score == worker_index (reduces collision probability)
-     - If no preferred tasks available, take any candidate
+  4. SELECT subtask:
+     - If multiple workers active, use affinity: hash(subtask.id) % worker_count
+     - PREFER tasks where affinity == worker_index
+     - If no preferred available, take any candidate
 
-  5. TWO-PHASE CLAIM:
-     Phase 1 - Declare Intent:
-       - Set subtask.claim_intent.worker = "[NAME]"
-       - Set subtask.claim_intent.intent_at = "[now]"
-       - Set subtask.claim_intent.expires_at = "[now + 2 seconds]"
-       - Save project-tasks.json
+  5. CLAIM the subtask:
+     - Set subtask.claimed_by = "[NAME]"
+     - Set subtask.claimed_at = "[now]"
+     - Set subtask.status = "in_progress"
+     - Set worker.current_subtask = subtask.id
+     - Save project-tasks.json
 
-     Phase 2 - Wait and Verify (500ms later):
-       - Re-read project-tasks.json
-       - Check if subtask.claim_intent.worker == "[NAME]" still
-       - Check subtask.claimed_by == null still
-       - IF verification fails: GOTO step 2 (select different task)
-       - IF verification passes: Proceed to full claim
-
-     Phase 3 - Full Claim:
-       - Set subtask.claimed_by = "[NAME]"
-       - Set subtask.claimed_at = "[now]"
-       - Set subtask.status = "in_progress"
-       - Clear subtask.claim_intent (set all fields to null)
-       - Set worker.current_subtask = subtask.id
-       - Save project-tasks.json
+     NOTE: For new subtasks, also set claim_intent if it exists
 
   6. EXECUTE the subtask using Task tool:
      ```

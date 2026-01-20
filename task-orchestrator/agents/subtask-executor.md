@@ -62,7 +62,10 @@ You are executing ONE subtask. Your job is:
    └── Match existing code style
 
 3. RUN VERIFICATION
-   ├── Execute verification command(s)
+   ├── Get verification command(s):
+   │   - If verification is ARRAY: run each command
+   │   - If verification is STRING: run as single command
+   ├── Execute via Bash tool
    ├── Check exit code
    └── Parse errors if failed
 
