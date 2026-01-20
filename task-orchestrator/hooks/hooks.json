@@ -1,0 +1,13 @@
+{
+  "Stop": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "prompt",
+          "prompt": "Check if this worker's orchestrator loop should continue:\n\n1. Read `project-tasks.json` in the current directory\n2. Identify YOUR worker name from the conversation context\n3. Check `workers.[YOUR_NAME].status` - if not \"running\", allow exit\n4. Check if `orchestrator_state.pause_all_requested` is true - if so, allow exit\n5. Count subtasks where:\n   - `status == \"pending\"`\n   - `claimed_by == null` (not claimed by another worker)\n   - All dependencies have `status == \"completed\"`\n6. If ready subtasks exist:\n   - Update your worker's heartbeat and iteration\n   - Output: `[WORKER_NAME] continuing - [N] unclaimed subtasks ready`\n   - CLAIM the next subtask (set claimed_by to your name)\n   - Execute it using the subtask-executor agent\n7. If no ready subtasks:\n   - Check if other workers are still running\n   - IF other workers running: wait (they may complete dependencies)\n   - IF no workers running AND all subtasks completed:\n     - Output: `<promise>ALL_TASKS_COMPLETE</promise>`\n     - Allow exit\n8. If all subtasks blocked:\n   - Set your worker status to \"paused\"\n   - Report blocked status\n   - Allow exit\n\nIMPORTANT: Only output the completion promise when ALL subtasks across ALL workers are genuinely complete."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "task-orchestrator",
+  "version": "2.0.0",
+  "description": "Orchestrator-Workers task management with atomic decomposition, 3-strike retries, and focus enforcement",
+  "author": {
+    "name": "Flash Bid",
+    "url": "https://github.com/flashbid"
+  },
+  "keywords": [
+    "orchestration",
+    "task-management",
+    "automation",
+    "atomic-tasks",
+    "parallel-execution"
+  ]
+}
